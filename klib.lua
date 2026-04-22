@@ -461,7 +461,7 @@ function Library:CreateWindow(config)
             end
         end)
 
-        TabBtn.MouseButton1Click:Connect(function()
+        local function SelectTab()
             for _, content in pairs(ContentContainer:GetChildren()) do
                 if content:IsA("ScrollingFrame") then
                     content.Visible = false
@@ -482,9 +482,13 @@ function Library:CreateWindow(config)
             
             TabContent.Position = UDim2.new(0, -10, 0, 0)
             Tween(TabContent, {Position = UDim2.new(0, 0, 0, 0)}, 0.4)
-        end)
+        end
 
-        if WindowClass.CurrentTabString == "" then  TabBtn.MouseButton1Click:Fire() end
+        TabBtn.MouseButton1Click:Connect(SelectTab)
+
+        if WindowClass.CurrentTabString == "" then 
+            SelectTab() 
+        end
 
         -- ==========================================
         -- KOMPONENTY (ELEMENTS)
@@ -663,6 +667,155 @@ function Library:CreateWindow(config)
             TB.FocusLost:Connect(function() pcall(callback, TB.Text) end)
             function InputSystem:Set(val) TB.Text = tostring(val); pcall(callback, val) end
             return InputSystem
+        end
+
+        function Tab:CreateDropdown(options)
+            local dropText = options.Name or "Dropdown"
+            local dropOptions = options.Options or {}
+            local currentOpt = options.CurrentOption or ""
+            local callback = options.Callback or function() end
+            
+            local DropdownSystem = {Value = currentOpt}
+            local ClosedHeight = 42
+            
+            local DropdownFrame = Create("Frame", {
+                Parent = TabContent, BackgroundColor3 = Theme.ElementColor, Size = UDim2.new(1, 0, 0, ClosedHeight), ClipsDescendants = true
+            })
+            Create("UICorner", {Parent = DropdownFrame, CornerRadius = UDim.new(0, 6)})
+            Create("UIStroke", {Parent = DropdownFrame, Color = Theme.ElementStroke, Thickness = 1})
+            
+            local ToggleBtn = Create("TextButton", {
+                Parent = DropdownFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, ClosedHeight), Text = "", AutoButtonColor = false
+            })
+            local TitleLabel = Create("TextLabel", {
+                Parent = DropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(1, -50, 0, ClosedHeight),
+                Font = Enum.Font.GothamMedium, Text = dropText .. (currentOpt ~= "" and (" - " .. currentOpt) or ""),
+                TextColor3 = Theme.Text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left
+            })
+            local Icon = Create("TextLabel", {
+                Parent = DropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(1, -35, 0, 0), Size = UDim2.new(0, 30, 0, ClosedHeight),
+                Font = Enum.Font.GothamMedium, Text = "+", TextColor3 = Theme.Accent, TextSize = 22
+            })
+            
+            local ScrollContainer = Create("ScrollingFrame", {
+                Parent = DropdownFrame, BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, ClosedHeight + 5),
+                Size = UDim2.new(1, -20, 1, -(ClosedHeight + 15)), ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Accent
+            })
+            Create("UICorner", {Parent = ScrollContainer, CornerRadius = UDim.new(0, 4)})
+            local ScrollList = Create("UIListLayout", {Parent = ScrollContainer, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 2)})
+            
+            local function RefreshSize()
+                if ScrollContainer.Visible then
+                    local scrollHeight = math.clamp(#dropOptions * 30, 0, 120)
+                    Tween(DropdownFrame, {Size = UDim2.new(1, 0, 0, ClosedHeight + 20 + scrollHeight)}, 0.4)
+                    Tween(Icon, {Rotation = 45}, 0.3)
+                else
+                    Tween(DropdownFrame, {Size = UDim2.new(1, 0, 0, ClosedHeight)}, 0.4)
+                    Tween(Icon, {Rotation = 0}, 0.3)
+                end
+            end
+            ScrollContainer.Visible = false
+            ToggleBtn.MouseButton1Click:Connect(function() ScrollContainer.Visible = not ScrollContainer.Visible; RefreshSize() end)
+            
+            local function Populate(opts)
+                dropOptions = opts or {}
+                for _, v in pairs(ScrollContainer:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+                for _, opt in pairs(dropOptions) do
+                    local btn = Create("TextButton", {
+                        Parent = ScrollContainer, BackgroundColor3 = Theme.ElementColor, BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 0, 28), Font = Enum.Font.GothamMedium, Text = "  " .. opt,
+                        TextColor3 = Theme.SubText, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false
+                    })
+                    btn.MouseEnter:Connect(function() Tween(btn, {TextColor3 = Theme.Text, BackgroundTransparency = 0.5}, 0.2) end)
+                    btn.MouseLeave:Connect(function()
+                        Tween(btn, {TextColor3 = DropdownSystem.Value == opt and Theme.Accent or Theme.SubText, BackgroundTransparency=1}, 0.2)
+                    end)
+                    btn.MouseButton1Click:Connect(function()
+                        DropdownSystem:Set(opt)
+                        ScrollContainer.Visible = false
+                        RefreshSize()
+                    end)
+                end
+                ScrollContainer.CanvasSize = UDim2.new(0, 0, 0, #dropOptions * 30)
+            end
+            Populate(dropOptions)
+            
+            function DropdownSystem:Set(newOption)
+                DropdownSystem.Value = newOption
+                TitleLabel.Text = dropText .. " - " .. tostring(newOption)
+                for _, btn in pairs(ScrollContainer:GetChildren()) do
+                    if btn:IsA("TextButton") then btn.TextColor3 = btn.Text:match(newOption) and Theme.Accent or Theme.SubText end
+                end
+                pcall(callback, newOption)
+            end
+            
+            function DropdownSystem:Refresh(newOptionsArray, newDefault)
+                Populate(newOptionsArray)
+                if newDefault then DropdownSystem:Set(newDefault) end
+                if ScrollContainer.Visible then RefreshSize() end
+            end
+            if currentOpt ~= "" then DropdownSystem:Set(currentOpt) end
+            
+            return DropdownSystem
+        end
+
+        function Tab:CreateKeybind(options)
+            local kbText = options.Name or "Keybind"
+            local defaultKb = options.CurrentKeybind or "E"
+            local holdMode = options.HoldToInteract or false
+            local callback = options.Callback or function() end
+            
+            local KeybindSystem = {Key = defaultKb}
+            local KbFrame = Create("Frame", {Parent = TabContent, BackgroundColor3 = Theme.ElementColor, Size = UDim2.new(1, 0, 0, 42)})
+            Create("UICorner", {Parent = KbFrame, CornerRadius = UDim.new(0, 6)})
+            Create("UIStroke", {Parent = KbFrame, Color = Theme.ElementStroke, Thickness = 1})
+            
+            Create("TextLabel", {
+                Parent = KbFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(1, -100, 1, 0),
+                Font = Enum.Font.GothamMedium, Text = kbText, TextColor3 = Theme.Text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left
+            })
+            local BindBtn = Create("TextButton", {
+                Parent = KbFrame, BackgroundColor3 = Theme.Topbar, Position = UDim2.new(1, -75, 0.5, -14), Size = UDim2.new(0, 60, 0, 28),
+                Font = Enum.Font.GothamBold, Text = tostring(defaultKb), TextColor3 = Theme.Accent, TextSize = 12, AutoButtonColor = false
+            })
+            Create("UICorner", {Parent = BindBtn, CornerRadius = UDim.new(0, 4)})
+            
+            local Listening = false
+            BindBtn.MouseButton1Click:Connect(function()
+                if not Listening then
+                    Listening = true; BindBtn.Text = "..."
+                    Tween(BindBtn, {TextColor3 = Theme.SubText}, 0.1)
+                end
+            end)
+            
+            UserInputService.InputBegan:Connect(function(input, gp)
+                if Listening then
+                    if input.UserInputType == Enum.UserInputType.Keyboard then
+                        local key = input.KeyCode.Name
+                        Listening = false; KeybindSystem.Key = key; BindBtn.Text = key
+                        Tween(BindBtn, {TextColor3 = Theme.Accent}, 0.1)
+                    end
+                elseif not gp and not Listening then
+                    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode.Name == KeybindSystem.Key then
+                        if not holdMode then
+                            Tween(BindBtn, {Size = UDim2.new(0, 56, 0, 24)}, 0.1)
+                            pcall(callback, true)
+                            task.wait(0.1)
+                            Tween(BindBtn, {Size = UDim2.new(0, 60, 0, 28)}, 0.1)
+                        else
+                            pcall(callback, true)
+                        end
+                    end
+                end
+            end)
+            UserInputService.InputEnded:Connect(function(input, gp)
+                if not gp and holdMode and not Listening then
+                    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode.Name == KeybindSystem.Key then
+                        pcall(callback, false)
+                    end
+                end
+            end)
+            return KeybindSystem
         end
 
         return Tab
