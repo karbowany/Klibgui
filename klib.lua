@@ -1,14 +1,6 @@
 --[[
-    KLib - Premium GUI Library v3.0
+    KLib - Premium GUI Library v3.1 FIXED
     GitHub: https://raw.githubusercontent.com/karbowany/Klibgui/refs/heads/main/klib.lua
-    
-    Features:
-    - Clean & Modern Design
-    - Multiple Themes
-    - Watermark System
-    - Full Customization
-    - Smooth Animations
-    - Professional UI Elements
 ]]
 
 local KLib = {}
@@ -98,7 +90,7 @@ KLib.Config = {
     ScrollBarThickness = 6,
 }
 
--- ===== UTILITY FUNCTIONS =====
+-- ===== SAFE UTILITY FUNCTIONS =====
 local function CreateInstance(className, properties)
     local ok, result = pcall(function()
         local instance = Instance.new(className)
@@ -111,33 +103,41 @@ local function CreateInstance(className, properties)
         end
         return instance
     end)
-    return ok and result or Instance.new(className)
+    if ok then
+        return result
+    else
+        print("[KLib Error] Nie można stworzyć " .. className)
+        return nil
+    end
 end
 
 local function AddCorner(gui, radius)
-    if not gui then return end
-    local corner = CreateInstance("UICorner", {
-        CornerRadius = UDim.new(0, radius or 8)
-    })
-    if corner then corner.Parent = gui end
+    if not gui then return nil end
+    local corner = CreateInstance("UICorner")
+    if corner then
+        corner.CornerRadius = UDim.new(0, radius or 8)
+        corner.Parent = gui
+    end
     return corner
 end
 
 local function AddStroke(gui, color, thickness, transparency)
-    if not gui then return end
-    local stroke = CreateInstance("UIStroke", {
-        Color = color or KLib.Themes[KLib.Config.Theme].Primary,
-        Thickness = thickness or 1,
-        Transparency = transparency or 0.5,
-    })
-    if stroke then stroke.Parent = gui end
+    if not gui then return nil end
+    local stroke = CreateInstance("UIStroke")
+    if stroke then
+        stroke.Color = color or Color3.fromRGB(100, 149, 237)
+        stroke.Thickness = thickness or 1
+        stroke.Transparency = transparency or 0.5
+        stroke.Parent = gui
+    end
     return stroke
 end
 
 local function Tween(object, tweenInfo, properties)
-    if not object then return end
+    if not object then return nil end
+    
     local tweenService = game:GetService("TweenService")
-    if not tweenService then return object end
+    if not tweenService then return nil end
     
     local ok, tween = pcall(function()
         return tweenService:Create(object, tweenInfo, properties)
@@ -151,7 +151,8 @@ local function Tween(object, tweenInfo, properties)
 end
 
 local function GetTheme()
-    return KLib.Themes[KLib.Config.Theme] or KLib.Themes.Dark
+    local themeName = KLib.Config.Theme or "Dark"
+    return KLib.Themes[themeName] or KLib.Themes.Dark
 end
 
 -- ===== WATERMARK =====
@@ -159,38 +160,28 @@ local function CreateWatermark(screenGui)
     if not KLib.Config.ShowWatermark then return end
     if not screenGui then return end
     
-    local watermark = CreateInstance("TextLabel", {
-        Name = "Watermark",
-        Parent = screenGui,
-        BackgroundTransparency = 0.1,
-        BackgroundColor3 = GetTheme().Surface,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0, 150, 0, 25),
-        Position = UDim2.new(1, -160, 0, 10),
-        TextColor3 = GetTheme().Primary,
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        Text = "✦ " .. KLib.Config.WatermarkText,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 1000,
-    })
+    local theme = GetTheme()
+    
+    local watermark = CreateInstance("TextLabel")
+    if not watermark then return end
+    
+    watermark.Name = "Watermark"
+    watermark.Parent = screenGui
+    watermark.BackgroundTransparency = 0.1
+    watermark.BackgroundColor3 = theme.Surface
+    watermark.BorderSizePixel = 0
+    watermark.Size = UDim2.new(0, 150, 0, 25)
+    watermark.Position = UDim2.new(1, -160, 0, 10)
+    watermark.TextColor3 = theme.Primary
+    watermark.TextSize = 12
+    watermark.Font = Enum.Font.GothamBold
+    watermark.Text = "✦ " .. KLib.Config.WatermarkText
+    watermark.TextXAlignment = Enum.TextXAlignment.Center
+    watermark.TextYAlignment = Enum.TextYAlignment.Center
+    watermark.ZIndex = 1000
     
     AddCorner(watermark, 6)
-    AddStroke(watermark, GetTheme().Primary, 1, 0.7)
-    
-    -- Glassmorphism effect
-    local gradient = CreateInstance("UIGradient", {
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, GetTheme().Primary),
-            ColorSequenceKeypoint.new(1, GetTheme().Accent),
-        }),
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.3),
-            NumberSequenceKeypoint.new(1, 0.8),
-        }),
-    })
-    if gradient then gradient.Parent = watermark end
+    AddStroke(watermark, theme.Primary, 1, 0.7)
     
     return watermark
 end
@@ -205,27 +196,23 @@ function KLib.CreateWindow(title, options)
     
     -- Get PlayerGui
     local playerGui = nil
-    local ok = pcall(function()
-        playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui", 2)
+    pcall(function()
+        playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui", 1)
     end)
     
     if not playerGui then
-        warn("[KLib] Nie można znaleźć PlayerGui!")
+        print("[KLib] Błąd: Nie można znaleźć PlayerGui")
         return nil
     end
     
     -- Screen GUI
-    local screenGui = CreateInstance("ScreenGui", {
-        Name = "KLib_" .. title,
-        ResetOnSpawn = options.ResetOnSpawn ~= false,
-        DisplayOrder = options.DisplayOrder or 10,
-    })
+    local screenGui = CreateInstance("ScreenGui")
+    if not screenGui then return nil end
     
-    if screenGui then
-        screenGui.Parent = playerGui
-    else
-        return nil
-    end
+    screenGui.Name = "KLib_" .. tostring(title)
+    screenGui.ResetOnSpawn = options.ResetOnSpawn ~= false
+    screenGui.DisplayOrder = options.DisplayOrder or 10
+    screenGui.Parent = playerGui
     
     -- Create Watermark
     CreateWatermark(screenGui)
@@ -233,31 +220,33 @@ function KLib.CreateWindow(title, options)
     local theme = GetTheme()
     
     -- Main Window Frame
-    local window = CreateInstance("Frame", {
-        Name = "MainWindow",
-        Parent = screenGui,
-        BackgroundColor3 = theme.Background,
-        BorderSizePixel = 0,
-        Size = windowSize,
-        Position = windowPos,
-        Active = true,
-    })
+    local window = CreateInstance("Frame")
+    if not window then return nil end
+    
+    window.Name = "MainWindow"
+    window.Parent = screenGui
+    window.BackgroundColor3 = theme.Background
+    window.BorderSizePixel = 0
+    window.Size = windowSize
+    window.Position = windowPos
+    window.Active = true
     
     AddCorner(window, KLib.Config.WindowCornerRadius)
     AddStroke(window, theme.Border, 1, 0.3)
     
-    -- Shadow effect (fake)
-    local shadow = CreateInstance("Frame", {
-        Name = "Shadow",
-        Parent = screenGui,
-        BackgroundColor3 = Color3.new(0, 0, 0),
-        BorderSizePixel = 0,
-        Size = windowSize,
-        Position = windowPos + UDim2.new(0, 3, 0, 3),
-        ZIndex = 0,
-    })
-    AddCorner(shadow, KLib.Config.WindowCornerRadius)
-    shadow.BackgroundTransparency = 0.8
+    -- Shadow effect
+    local shadow = CreateInstance("Frame")
+    if shadow then
+        shadow.Name = "Shadow"
+        shadow.Parent = screenGui
+        shadow.BackgroundColor3 = Color3.new(0, 0, 0)
+        shadow.BorderSizePixel = 0
+        shadow.Size = windowSize
+        shadow.Position = windowPos + UDim2.new(0, 3, 0, 3)
+        shadow.ZIndex = 0
+        shadow.BackgroundTransparency = 0.8
+        AddCorner(shadow, KLib.Config.WindowCornerRadius)
+    end
     
     -- Drag functionality
     local UserInputService = game:GetService("UserInputService")
@@ -266,155 +255,164 @@ function KLib.CreateWindow(title, options)
     local windowStart = nil
     
     if window then
-        window.InputBegan:Connect(function(input, gameProcessed)
-            if gameProcessed then return end
+        local success = pcall(function()
+            window.InputBegan:Connect(function(input, gameProcessed)
+                if gameProcessed then return end
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    dragging = true
+                    dragStart = game:GetService("Mouse").Position
+                    windowStart = window.Position
+                    if shadow then shadow.Position = windowStart + UDim2.new(0, 3, 0, 3) end
+                end
+            end)
+        end)
+    end
+    
+    pcall(function()
+        UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-                dragStart = game:GetService("Mouse").Position
-                windowStart = window.Position
-                shadow.Position = windowStart + UDim2.new(0, 3, 0, 3)
+                dragging = false
+            end
+        end)
+    end)
+    
+    pcall(function()
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.Mouse and window then
+                local mouse = game:GetService("Mouse")
+                local delta = mouse.Position - dragStart
+                window.Position = windowStart + UDim2.new(0, delta.X, 0, delta.Y)
+                if shadow then shadow.Position = window.Position + UDim2.new(0, 3, 0, 3) end
+            end
+        end)
+    end)
+    
+    -- ===== TITLE BAR =====
+    local titleBar = CreateInstance("Frame")
+    if not titleBar then return nil end
+    
+    titleBar.Name = "TitleBar"
+    titleBar.Parent = window
+    titleBar.BackgroundColor3 = theme.Secondary
+    titleBar.BorderSizePixel = 0
+    titleBar.Size = UDim2.new(1, 0, 0, 45)
+    titleBar.Position = UDim2.new(0, 0, 0, 0)
+    
+    AddCorner(titleBar, KLib.Config.WindowCornerRadius)
+    
+    -- Title Icon
+    local titleIcon = CreateInstance("TextLabel")
+    if titleIcon then
+        titleIcon.Name = "Icon"
+        titleIcon.Parent = titleBar
+        titleIcon.BackgroundTransparency = 1
+        titleIcon.BorderSizePixel = 0
+        titleIcon.Size = UDim2.new(0, 45, 1, 0)
+        titleIcon.Position = UDim2.new(0, 0, 0, 0)
+        titleIcon.TextColor3 = theme.Primary
+        titleIcon.TextSize = 20
+        titleIcon.Font = Enum.Font.GothamBold
+        titleIcon.Text = options.Icon or "⚙️"
+        titleIcon.TextXAlignment = Enum.TextXAlignment.Center
+        titleIcon.TextYAlignment = Enum.TextYAlignment.Center
+    end
+    
+    -- Title Text
+    local titleText = CreateInstance("TextLabel")
+    if titleText then
+        titleText.Name = "Title"
+        titleText.Parent = titleBar
+        titleText.BackgroundTransparency = 1
+        titleText.BorderSizePixel = 0
+        titleText.Size = UDim2.new(1, -90, 1, 0)
+        titleText.Position = UDim2.new(0, 45, 0, 0)
+        titleText.TextColor3 = theme.Text
+        titleText.TextSize = 16
+        titleText.Font = Enum.Font.GothamBold
+        titleText.Text = title
+        titleText.TextXAlignment = Enum.TextXAlignment.Left
+        titleText.TextYAlignment = Enum.TextYAlignment.Center
+    end
+    
+    -- Close Button
+    local closeBtn = CreateInstance("TextButton")
+    if closeBtn then
+        closeBtn.Name = "CloseBtn"
+        closeBtn.Parent = titleBar
+        closeBtn.BackgroundColor3 = theme.Danger
+        closeBtn.BorderSizePixel = 0
+        closeBtn.Size = UDim2.new(0, 35, 0, 35)
+        closeBtn.Position = UDim2.new(1, -40, 0.5, -17)
+        closeBtn.TextColor3 = theme.Text
+        closeBtn.TextSize = 18
+        closeBtn.Font = Enum.Font.GothamBold
+        closeBtn.Text = "×"
+        
+        AddCorner(closeBtn, 6)
+        
+        closeBtn.MouseButton1Click:Connect(function()
+            if screenGui then
+                screenGui:Destroy()
+            end
+        end)
+        
+        closeBtn.MouseEnter:Connect(function()
+            if closeBtn then
+                closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+            end
+        end)
+        
+        closeBtn.MouseLeave:Connect(function()
+            if closeBtn then
+                closeBtn.BackgroundColor3 = theme.Danger
             end
         end)
     end
     
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.Mouse and window then
-            local mouse = game:GetService("Mouse")
-            local delta = mouse.Position - dragStart
-            window.Position = windowStart + UDim2.new(0, delta.X, 0, delta.Y)
-            shadow.Position = window.Position + UDim2.new(0, 3, 0, 3)
-        end
-    end)
-    
-    -- ===== TITLE BAR =====
-    local titleBar = CreateInstance("Frame", {
-        Name = "TitleBar",
-        Parent = window,
-        BackgroundColor3 = theme.Secondary,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 45),
-        Position = UDim2.new(0, 0, 0, 0),
-    })
-    AddCorner(titleBar, KLib.Config.WindowCornerRadius)
-    
-    -- Title Icon
-    local titleIcon = CreateInstance("TextLabel", {
-        Name = "Icon",
-        Parent = titleBar,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0, 45, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
-        TextColor3 = theme.Primary,
-        TextSize = 20,
-        Font = Enum.Font.GothamBold,
-        Text = options.Icon or "⚙️",
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextYAlignment = Enum.TextYAlignment.Center,
-    })
-    
-    local titleText = CreateInstance("TextLabel", {
-        Name = "Title",
-        Parent = titleBar,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, -90, 1, 0),
-        Position = UDim2.new(0, 45, 0, 0),
-        TextColor3 = theme.Text,
-        TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        Text = title,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Center,
-    })
-    
-    -- Close Button
-    local closeBtn = CreateInstance("TextButton", {
-        Name = "CloseBtn",
-        Parent = titleBar,
-        BackgroundColor3 = theme.Danger,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0, 35, 0, 35),
-        Position = UDim2.new(1, -40, 0.5, -17),
-        TextColor3 = theme.Text,
-        TextSize = 18,
-        Font = Enum.Font.GothamBold,
-        Text = "×",
-    })
-    AddCorner(closeBtn, 6)
-    
-    if closeBtn then
-        closeBtn.MouseButton1Click:Connect(function()
-            Tween(window, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                BackgroundTransparency = 1,
-                Position = window.Position + UDim2.new(0, 0, -0.5, 0),
-            }):Completed:Connect(function()
-                screenGui:Destroy()
-            end)
-        end)
-        
-        closeBtn.MouseEnter:Connect(function()
-            Tween(closeBtn, TweenInfo.new(0.2), {
-                BackgroundColor3 = theme.Danger:Lerp(Color3.new(1, 1, 1), 0.2),
-            })
-        end)
-        
-        closeBtn.MouseLeave:Connect(function()
-            Tween(closeBtn, TweenInfo.new(0.2), {
-                BackgroundColor3 = theme.Danger,
-            })
-        end)
-    end
-    
     -- ===== CONTENT AREA =====
-    local content = CreateInstance("Frame", {
-        Name = "Content",
-        Parent = window,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, -55),
-        Position = UDim2.new(0, 0, 0, 45),
-    })
+    local content = CreateInstance("Frame")
+    if not content then return nil end
     
-    local scrollFrame = CreateInstance("ScrollingFrame", {
-        Name = "ScrollFrame",
-        Parent = content,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
-        ScrollBarThickness = KLib.Config.ScrollBarThickness,
-        ScrollBarImageColor3 = theme.Primary,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-    })
+    content.Name = "Content"
+    content.Parent = window
+    content.BackgroundTransparency = 1
+    content.BorderSizePixel = 0
+    content.Size = UDim2.new(1, 0, 1, -55)
+    content.Position = UDim2.new(0, 0, 0, 45)
     
-    local listLayout = CreateInstance("UIListLayout", {
-        Parent = scrollFrame,
-        Padding = UDim.new(0, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        FillDirection = Enum.FillDirection.Vertical,
-    })
+    local scrollFrame = CreateInstance("ScrollingFrame")
+    if not scrollFrame then return nil end
     
-    local padding = CreateInstance("UIPadding", {
-        Parent = scrollFrame,
-        PaddingTop = UDim.new(0, 12),
-        PaddingBottom = UDim.new(0, 12),
-        PaddingLeft = UDim.new(0, 12),
-        PaddingRight = UDim.new(0, 12),
-    })
+    scrollFrame.Name = "ScrollFrame"
+    scrollFrame.Parent = content
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.Size = UDim2.new(1, 0, 1, 0)
+    scrollFrame.ScrollBarThickness = KLib.Config.ScrollBarThickness
+    scrollFrame.ScrollBarImageColor3 = theme.Primary
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     
-    -- Update canvas size
+    local listLayout = CreateInstance("UIListLayout")
     if listLayout then
+        listLayout.Parent = scrollFrame
+        listLayout.Padding = UDim.new(0, 10)
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.FillDirection = Enum.FillDirection.Vertical
+        
         listLayout.Changed:Connect(function()
             if scrollFrame then
                 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 24)
             end
         end)
+    end
+    
+    local padding = CreateInstance("UIPadding")
+    if padding then
+        padding.Parent = scrollFrame
+        padding.PaddingTop = UDim.new(0, 12)
+        padding.PaddingBottom = UDim.new(0, 12)
+        padding.PaddingLeft = UDim.new(0, 12)
+        padding.PaddingRight = UDim.new(0, 12)
     end
     
     -- ===== BUTTON =====
@@ -425,31 +423,31 @@ function KLib.CreateWindow(title, options)
         local theme = GetTheme()
         local buttonColor = buttonOptions.Color or theme.Primary
         
-        local button = CreateInstance("TextButton", {
-            Name = "Button_" .. (text or ""),
-            Parent = scrollFrame,
-            BackgroundColor3 = buttonColor,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -24, 0, 45),
-            Text = "",
-            LayoutOrder = buttonOptions.LayoutOrder or 1,
-        })
-        
+        local button = CreateInstance("TextButton")
         if not button then return nil end
+        
+        button.Name = "Button_" .. tostring(text or "")
+        button.Parent = scrollFrame
+        button.BackgroundColor3 = buttonColor
+        button.BorderSizePixel = 0
+        button.Size = UDim2.new(1, -24, 0, 45)
+        button.Text = ""
+        button.LayoutOrder = buttonOptions.LayoutOrder or 1
         
         AddCorner(button, KLib.Config.ElementCornerRadius)
         AddStroke(button, buttonColor, 1, 0.5)
         
-        local btnText = CreateInstance("TextLabel", {
-            Parent = button,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 1, 0),
-            TextColor3 = theme.Text,
-            TextSize = 14,
-            Font = Enum.Font.GothamBold,
-            Text = text or "Button",
-        })
+        local btnText = CreateInstance("TextLabel")
+        if btnText then
+            btnText.Parent = button
+            btnText.BackgroundTransparency = 1
+            btnText.BorderSizePixel = 0
+            btnText.Size = UDim2.new(1, 0, 1, 0)
+            btnText.TextColor3 = theme.Text
+            btnText.TextSize = 14
+            btnText.Font = Enum.Font.GothamBold
+            btnText.Text = text or "Button"
+        end
         
         button.MouseButton1Click:Connect(function()
             if callback then
@@ -459,17 +457,13 @@ function KLib.CreateWindow(title, options)
         
         button.MouseEnter:Connect(function()
             if button then
-                Tween(button, TweenInfo.new(KLib.Config.AnimationSpeed), {
-                    BackgroundColor3 = buttonColor:Lerp(Color3.new(1, 1, 1), 0.2),
-                })
+                button.BackgroundColor3 = buttonColor:Lerp(Color3.new(1, 1, 1), 0.2)
             end
         end)
         
         button.MouseLeave:Connect(function()
             if button then
-                Tween(button, TweenInfo.new(KLib.Config.AnimationSpeed), {
-                    BackgroundColor3 = buttonColor,
-                })
+                button.BackgroundColor3 = buttonColor
             end
         end)
         
@@ -483,20 +477,21 @@ function KLib.CreateWindow(title, options)
         
         local theme = GetTheme()
         
-        local label = CreateInstance("TextLabel", {
-            Name = "Label_" .. (text and text:sub(1, 20) or ""),
-            Parent = scrollFrame,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -24, 0, 30),
-            Text = text or "Label",
-            TextColor3 = labelOptions.Color or theme.Text,
-            TextSize = labelOptions.Size or 14,
-            Font = labelOptions.Bold and Enum.Font.GothamBold or Enum.Font.Gotham,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Center,
-            LayoutOrder = labelOptions.LayoutOrder or 1,
-        })
+        local label = CreateInstance("TextLabel")
+        if not label then return nil end
+        
+        label.Name = "Label_" .. tostring(text and text:sub(1, 20) or "")
+        label.Parent = scrollFrame
+        label.BackgroundTransparency = 1
+        label.BorderSizePixel = 0
+        label.Size = UDim2.new(1, -24, 0, 30)
+        label.Text = text or "Label"
+        label.TextColor3 = labelOptions.Color or theme.Text
+        label.TextSize = labelOptions.Size or 14
+        label.Font = (labelOptions.Bold and Enum.Font.GothamBold) or Enum.Font.Gotham
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextYAlignment = Enum.TextYAlignment.Center
+        label.LayoutOrder = labelOptions.LayoutOrder or 1
         
         return label
     end
@@ -508,30 +503,30 @@ function KLib.CreateWindow(title, options)
         
         local theme = GetTheme()
         
-        local inputBox = CreateInstance("TextBox", {
-            Name = "InputBox_" .. (placeholder or ""),
-            Parent = scrollFrame,
-            BackgroundColor3 = theme.Surface,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -24, 0, 42),
-            PlaceholderText = placeholder or "Wpisz coś...",
-            PlaceholderColor3 = theme.TextDim,
-            TextColor3 = theme.Text,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Center,
-            ClearTextOnFocus = false,
-            LayoutOrder = inputOptions.LayoutOrder or 1,
-        })
-        
+        local inputBox = CreateInstance("TextBox")
         if not inputBox then return nil end
         
-        local inputPadding = CreateInstance("UIPadding", {
-            Parent = inputBox,
-            PaddingLeft = UDim.new(0, 12),
-            PaddingRight = UDim.new(0, 12),
-        })
+        inputBox.Name = "InputBox_" .. tostring(placeholder or "")
+        inputBox.Parent = scrollFrame
+        inputBox.BackgroundColor3 = theme.Surface
+        inputBox.BorderSizePixel = 0
+        inputBox.Size = UDim2.new(1, -24, 0, 42)
+        inputBox.PlaceholderText = placeholder or "Wpisz coś..."
+        inputBox.PlaceholderColor3 = theme.TextDim
+        inputBox.TextColor3 = theme.Text
+        inputBox.TextSize = 14
+        inputBox.Font = Enum.Font.Gotham
+        inputBox.TextXAlignment = Enum.TextXAlignment.Left
+        inputBox.TextYAlignment = Enum.TextYAlignment.Center
+        inputBox.ClearTextOnFocus = false
+        inputBox.LayoutOrder = inputOptions.LayoutOrder or 1
+        
+        local inputPadding = CreateInstance("UIPadding")
+        if inputPadding then
+            inputPadding.Parent = inputBox
+            inputPadding.PaddingLeft = UDim.new(0, 12)
+            inputPadding.PaddingRight = UDim.new(0, 12)
+        end
         
         AddCorner(inputBox, KLib.Config.ElementCornerRadius)
         AddStroke(inputBox, theme.Primary, 1, 0.3)
@@ -542,10 +537,6 @@ function KLib.CreateWindow(title, options)
                     callback(inputBox.Text)
                 end)
             end
-        end)
-        
-        inputBox.Focused:Connect(function()
-            AddStroke(inputBox, theme.Primary, 2, 0.1)
         end)
         
         return inputBox
@@ -559,83 +550,86 @@ function KLib.CreateWindow(title, options)
         
         local theme = GetTheme()
         
-        local container = CreateInstance("Frame", {
-            Name = "Toggle_" .. (text or ""),
-            Parent = scrollFrame,
-            BackgroundColor3 = theme.Surface,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -24, 0, 45),
-            LayoutOrder = toggleOptions.LayoutOrder or 1,
-        })
-        
+        local container = CreateInstance("Frame")
         if not container then return nil end
+        
+        container.Name = "Toggle_" .. tostring(text or "")
+        container.Parent = scrollFrame
+        container.BackgroundColor3 = theme.Surface
+        container.BorderSizePixel = 0
+        container.Size = UDim2.new(1, -24, 0, 45)
+        container.LayoutOrder = toggleOptions.LayoutOrder or 1
         
         AddCorner(container, KLib.Config.ElementCornerRadius)
         AddStroke(container, theme.Border, 1, 0.3)
         
-        local label = CreateInstance("TextLabel", {
-            Parent = container,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -65, 1, 0),
-            Position = UDim2.new(0, 12, 0, 0),
-            Text = text or "Toggle",
-            TextColor3 = theme.Text,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Center,
-        })
+        local label = CreateInstance("TextLabel")
+        if label then
+            label.Parent = container
+            label.BackgroundTransparency = 1
+            label.BorderSizePixel = 0
+            label.Size = UDim2.new(1, -65, 1, 0)
+            label.Position = UDim2.new(0, 12, 0, 0)
+            label.Text = text or "Toggle"
+            label.TextColor3 = theme.Text
+            label.TextSize = 14
+            label.Font = Enum.Font.Gotham
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.TextYAlignment = Enum.TextYAlignment.Center
+        end
         
-        local toggleBox = CreateInstance("Frame", {
-            Name = "ToggleBox",
-            Parent = container,
-            BackgroundColor3 = toggled and theme.Success or theme.Surface,
-            BorderSizePixel = 0,
-            Size = UDim2.new(0, 50, 0, 28),
-            Position = UDim2.new(1, -58, 0.5, -14),
-        })
-        AddCorner(toggleBox, 6)
-        AddStroke(toggleBox, toggled and theme.Success or theme.Border, 1, 0.3)
-        
-        local toggleDot = CreateInstance("Frame", {
-            Name = "Dot",
-            Parent = toggleBox,
-            BackgroundColor3 = Color3.new(1, 1, 1),
-            BorderSizePixel = 0,
-            Size = UDim2.new(0, 24, 0, 24),
-            Position = toggled and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12),
-        })
-        AddCorner(toggleDot, 4)
-        
-        local clickBtn = CreateInstance("TextButton", {
-            Parent = container,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(0, 60, 1, 0),
-            Position = UDim2.new(1, -60, 0, 0),
-            Text = "",
-        })
-        
-        if clickBtn then
-            clickBtn.MouseButton1Click:Connect(function()
-                toggled = not toggled
-                local newColor = toggled and theme.Success or theme.Surface
+        local toggleBox = CreateInstance("Frame")
+        if toggleBox then
+            toggleBox.Name = "ToggleBox"
+            toggleBox.Parent = container
+            toggleBox.BackgroundColor3 = toggled and theme.Success or theme.Surface
+            toggleBox.BorderSizePixel = 0
+            toggleBox.Size = UDim2.new(0, 50, 0, 28)
+            toggleBox.Position = UDim2.new(1, -58, 0.5, -14)
+            
+            AddCorner(toggleBox, 6)
+            AddStroke(toggleBox, toggled and theme.Success or theme.Border, 1, 0.3)
+            
+            local toggleDot = CreateInstance("Frame")
+            if toggleDot then
+                toggleDot.Name = "Dot"
+                toggleDot.Parent = toggleBox
+                toggleDot.BackgroundColor3 = Color3.new(1, 1, 1)
+                toggleDot.BorderSizePixel = 0
+                toggleDot.Size = UDim2.new(0, 24, 0, 24)
+                toggleDot.Position = toggled and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12)
                 
-                Tween(toggleBox, TweenInfo.new(KLib.Config.AnimationSpeed), {
-                    BackgroundColor3 = newColor,
-                })
+                AddCorner(toggleDot, 4)
+            end
+            
+            local clickBtn = CreateInstance("TextButton")
+            if clickBtn then
+                clickBtn.Parent = container
+                clickBtn.BackgroundTransparency = 1
+                clickBtn.BorderSizePixel = 0
+                clickBtn.Size = UDim2.new(0, 60, 1, 0)
+                clickBtn.Position = UDim2.new(1, -60, 0, 0)
+                clickBtn.Text = ""
                 
-                Tween(toggleDot, TweenInfo.new(KLib.Config.AnimationSpeed), {
-                    Position = toggled and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12),
-                })
-                
-                if callback then
-                    pcall(function()
-                        callback(toggled)
-                    end)
-                end
-            end)
+                clickBtn.MouseButton1Click:Connect(function()
+                    toggled = not toggled
+                    local newColor = toggled and theme.Success or theme.Surface
+                    
+                    if toggleBox then
+                        toggleBox.BackgroundColor3 = newColor
+                    end
+                    
+                    if toggleDot then
+                        toggleDot.Position = toggled and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12)
+                    end
+                    
+                    if callback then
+                        pcall(function()
+                            callback(toggled)
+                        end)
+                    end
+                end)
+            end
         end
         
         return container
@@ -650,156 +644,152 @@ function KLib.CreateWindow(title, options)
         
         local theme = GetTheme()
         
-        local container = CreateInstance("Frame", {
-            Name = "Dropdown",
-            Parent = scrollFrame,
-            BackgroundColor3 = theme.Surface,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -24, 0, 45),
-            LayoutOrder = dropdownSettings.LayoutOrder or 1,
-        })
-        
+        local container = CreateInstance("Frame")
         if not container then return nil end
+        
+        container.Name = "Dropdown"
+        container.Parent = scrollFrame
+        container.BackgroundColor3 = theme.Surface
+        container.BorderSizePixel = 0
+        container.Size = UDim2.new(1, -24, 0, 45)
+        container.LayoutOrder = dropdownSettings.LayoutOrder or 1
         
         AddCorner(container, KLib.Config.ElementCornerRadius)
         AddStroke(container, theme.Border, 1, 0.3)
         
-        local label = CreateInstance("TextLabel", {
-            Parent = container,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -50, 1, 0),
-            Position = UDim2.new(0, 12, 0, 0),
-            Text = selected,
-            TextColor3 = theme.Text,
-            TextSize = 14,
-            Font = Enum.Font.Gotham,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Center,
-            ClipsDescendants = true,
-        })
+        local label = CreateInstance("TextLabel")
+        if label then
+            label.Parent = container
+            label.BackgroundTransparency = 1
+            label.BorderSizePixel = 0
+            label.Size = UDim2.new(1, -50, 1, 0)
+            label.Position = UDim2.new(0, 12, 0, 0)
+            label.Text = selected
+            label.TextColor3 = theme.Text
+            label.TextSize = 14
+            label.Font = Enum.Font.Gotham
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.TextYAlignment = Enum.TextYAlignment.Center
+            label.ClipsDescendants = true
+        end
         
-        local arrow = CreateInstance("TextLabel", {
-            Parent = container,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(0, 40, 1, 0),
-            Position = UDim2.new(1, -40, 0, 0),
-            Text = "▼",
-            TextColor3 = theme.Primary,
-            TextSize = 11,
-            Font = Enum.Font.Gotham,
-            Rotation = 0,
-        })
+        local arrow = CreateInstance("TextLabel")
+        if arrow then
+            arrow.Parent = container
+            arrow.BackgroundTransparency = 1
+            arrow.BorderSizePixel = 0
+            arrow.Size = UDim2.new(0, 40, 1, 0)
+            arrow.Position = UDim2.new(1, -40, 0, 0)
+            arrow.Text = "▼"
+            arrow.TextColor3 = theme.Primary
+            arrow.TextSize = 11
+            arrow.Font = Enum.Font.Gotham
+            arrow.Rotation = 0
+        end
         
-        local dropdownButton = CreateInstance("TextButton", {
-            Parent = container,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 1, 0),
-            Text = "",
-        })
+        local dropdownButton = CreateInstance("TextButton")
+        if dropdownButton then
+            dropdownButton.Parent = container
+            dropdownButton.BackgroundTransparency = 1
+            dropdownButton.BorderSizePixel = 0
+            dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+            dropdownButton.Text = ""
+        end
         
-        local list = CreateInstance("Frame", {
-            Name = "DropdownList",
-            Parent = container,
-            BackgroundColor3 = theme.Secondary,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 0),
-            Position = UDim2.new(0, 0, 1, 5),
-            ClipsDescendants = true,
-            Visible = false,
-            ZIndex = 100,
-        })
-        AddCorner(list, KLib.Config.ElementCornerRadius)
-        AddStroke(list, theme.Border, 1, 0.3)
-        
-        local listLayout = CreateInstance("UIListLayout", {
-            Parent = list,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 4),
-        })
-        
-        local listPadding = CreateInstance("UIPadding", {
-            Parent = list,
-            PaddingTop = UDim.new(0, 6),
-            PaddingBottom = UDim.new(0, 6),
-            PaddingLeft = UDim.new(0, 8),
-            PaddingRight = UDim.new(0, 8),
-        })
-        
-        for i, option in ipairs(dropdownOptions) do
-            local button = CreateInstance("TextButton", {
-                Parent = list,
-                BackgroundColor3 = theme.Surface,
-                BorderSizePixel = 0,
-                Size = UDim2.new(1, -16, 0, 32),
-                Text = option,
-                TextColor3 = theme.Text,
-                TextSize = 13,
-                Font = Enum.Font.Gotham,
-                LayoutOrder = i,
-            })
-            AddCorner(button, 4)
-            AddStroke(button, theme.Border, 1, 0.5)
+        local list = CreateInstance("Frame")
+        if list then
+            list.Name = "DropdownList"
+            list.Parent = container
+            list.BackgroundColor3 = theme.Secondary
+            list.BorderSizePixel = 0
+            list.Size = UDim2.new(1, 0, 0, 0)
+            list.Position = UDim2.new(0, 0, 1, 5)
+            list.ClipsDescendants = true
+            list.Visible = false
+            list.ZIndex = 100
             
-            if button then
-                button.MouseButton1Click:Connect(function()
-                    selected = option
-                    if label then label.Text = selected end
-                    dropdownOpen = false
+            AddCorner(list, KLib.Config.ElementCornerRadius)
+            AddStroke(list, theme.Border, 1, 0.3)
+            
+            local listLayout = CreateInstance("UIListLayout")
+            if listLayout then
+                listLayout.Parent = list
+                listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                listLayout.Padding = UDim.new(0, 4)
+            end
+            
+            local listPadding = CreateInstance("UIPadding")
+            if listPadding then
+                listPadding.Parent = list
+                listPadding.PaddingTop = UDim.new(0, 6)
+                listPadding.PaddingBottom = UDim.new(0, 6)
+                listPadding.PaddingLeft = UDim.new(0, 8)
+                listPadding.PaddingRight = UDim.new(0, 8)
+            end
+            
+            for i, option in ipairs(dropdownOptions) do
+                local button = CreateInstance("TextButton")
+                if button then
+                    button.Parent = list
+                    button.BackgroundColor3 = theme.Surface
+                    button.BorderSizePixel = 0
+                    button.Size = UDim2.new(1, -16, 0, 32)
+                    button.Text = option
+                    button.TextColor3 = theme.Text
+                    button.TextSize = 13
+                    button.Font = Enum.Font.Gotham
+                    button.LayoutOrder = i
                     
+                    AddCorner(button, 4)
+                    AddStroke(button, theme.Border, 1, 0.5)
+                    
+                    button.MouseButton1Click:Connect(function()
+                        selected = option
+                        if label then label.Text = selected end
+                        dropdownOpen = false
+                        
+                        if list then
+                            list.Visible = false
+                            list.Size = UDim2.new(1, 0, 0, 0)
+                        end
+                        if arrow then arrow.Rotation = 0 end
+                        
+                        if callback then
+                            pcall(function()
+                                callback(selected)
+                            end)
+                        end
+                    end)
+                    
+                    button.MouseEnter:Connect(function()
+                        if button then
+                            button.BackgroundColor3 = theme.Primary
+                        end
+                    end)
+                    
+                    button.MouseLeave:Connect(function()
+                        if button then
+                            button.BackgroundColor3 = theme.Surface
+                        end
+                    end)
+                end
+            end
+            
+            if dropdownButton then
+                dropdownButton.MouseButton1Click:Connect(function()
+                    dropdownOpen = not dropdownOpen
                     if list then
-                        list.Visible = false
-                        list.Size = UDim2.new(1, 0, 0, 0)
-                    end
-                    if arrow then
-                        Tween(arrow, TweenInfo.new(KLib.Config.AnimationSpeed), {Rotation = 0})
-                    end
-                    
-                    if callback then
-                        pcall(function()
-                            callback(selected)
-                        end)
-                    end
-                end)
-                
-                button.MouseEnter:Connect(function()
-                    if button then
-                        Tween(button, TweenInfo.new(0.15), {
-                            BackgroundColor3 = theme.Primary,
-                        })
-                    end
-                end)
-                
-                button.MouseLeave:Connect(function()
-                    if button then
-                        Tween(button, TweenInfo.new(0.15), {
-                            BackgroundColor3 = theme.Surface,
-                        })
+                        list.Visible = dropdownOpen
+                        if dropdownOpen then
+                            list.Size = UDim2.new(1, 0, 0, #dropdownOptions * 36 + 12)
+                            if arrow then arrow.Rotation = 180 end
+                        else
+                            list.Size = UDim2.new(1, 0, 0, 0)
+                            if arrow then arrow.Rotation = 0 end
+                        end
                     end
                 end)
             end
-        end
-        
-        if dropdownButton then
-            dropdownButton.MouseButton1Click:Connect(function()
-                dropdownOpen = not dropdownOpen
-                if list then
-                    list.Visible = dropdownOpen
-                    if dropdownOpen then
-                        list.Size = UDim2.new(1, 0, 0, #dropdownOptions * 36 + 12)
-                        if arrow then
-                            Tween(arrow, TweenInfo.new(KLib.Config.AnimationSpeed), {Rotation = 180})
-                        end
-                    else
-                        list.Size = UDim2.new(1, 0, 0, 0)
-                        if arrow then
-                            Tween(arrow, TweenInfo.new(KLib.Config.AnimationSpeed), {Rotation = 0})
-                        end
-                    end
-                end
-            end)
         end
         
         return container
@@ -813,101 +803,107 @@ function KLib.CreateWindow(title, options)
         
         local theme = GetTheme()
         
-        local container = CreateInstance("Frame", {
-            Name = "Slider",
-            Parent = scrollFrame,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -24, 0, 60),
-            LayoutOrder = sliderOptions.LayoutOrder or 1,
-        })
-        
+        local container = CreateInstance("Frame")
         if not container then return nil end
         
-        local label = CreateInstance("TextLabel", {
-            Parent = container,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 20),
-            Text = (sliderOptions.Label or "Value") .. ": " .. currentValue,
-            TextColor3 = theme.Text,
-            TextSize = 13,
-            Font = Enum.Font.GothamBold,
-            TextXAlignment = Enum.TextXAlignment.Left,
-        })
+        container.Name = "Slider"
+        container.Parent = scrollFrame
+        container.BackgroundTransparency = 1
+        container.BorderSizePixel = 0
+        container.Size = UDim2.new(1, -24, 0, 60)
+        container.LayoutOrder = sliderOptions.LayoutOrder or 1
         
-        local sliderBg = CreateInstance("Frame", {
-            Name = "SliderBackground",
-            Parent = container,
-            BackgroundColor3 = theme.Surface,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 8),
-            Position = UDim2.new(0, 0, 0, 30),
-        })
-        AddCorner(sliderBg, 4)
-        AddStroke(sliderBg, theme.Border, 1, 0.3)
+        local label = CreateInstance("TextLabel")
+        if label then
+            label.Parent = container
+            label.BackgroundTransparency = 1
+            label.BorderSizePixel = 0
+            label.Size = UDim2.new(1, 0, 0, 20)
+            label.Text = (sliderOptions.Label or "Value") .. ": " .. tostring(currentValue)
+            label.TextColor3 = theme.Text
+            label.TextSize = 13
+            label.Font = Enum.Font.GothamBold
+            label.TextXAlignment = Enum.TextXAlignment.Left
+        end
         
-        local sliderFill = CreateInstance("Frame", {
-            Name = "SliderFill",
-            Parent = sliderBg,
-            BackgroundColor3 = theme.Primary,
-            BorderSizePixel = 0,
-            Size = UDim2.new((currentValue - min) / (max - min), 0, 1, 0),
-        })
-        AddCorner(sliderFill, 4)
-        
-        local sliderButton = CreateInstance("Frame", {
-            Name = "SliderButton",
-            Parent = sliderBg,
-            BackgroundColor3 = theme.Primary,
-            BorderSizePixel = 0,
-            Size = UDim2.new(0, 16, 1, 8),
-            Position = UDim2.new((currentValue - min) / (max - min), -8, 0.5, -4),
-        })
-        AddCorner(sliderButton, 8)
-        AddStroke(sliderButton, theme.Text, 1, 0.5)
-        
-        local draggingSlider = false
-        
-        sliderButton.InputBegan:Connect(function(input, gameProcessed)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                draggingSlider = true
+        local sliderBg = CreateInstance("Frame")
+        if sliderBg then
+            sliderBg.Name = "SliderBackground"
+            sliderBg.Parent = container
+            sliderBg.BackgroundColor3 = theme.Surface
+            sliderBg.BorderSizePixel = 0
+            sliderBg.Size = UDim2.new(1, 0, 0, 8)
+            sliderBg.Position = UDim2.new(0, 0, 0, 30)
+            
+            AddCorner(sliderBg, 4)
+            AddStroke(sliderBg, theme.Border, 1, 0.3)
+            
+            local sliderFill = CreateInstance("Frame")
+            if sliderFill then
+                sliderFill.Name = "SliderFill"
+                sliderFill.Parent = sliderBg
+                sliderFill.BackgroundColor3 = theme.Primary
+                sliderFill.BorderSizePixel = 0
+                sliderFill.Size = UDim2.new((currentValue - min) / (max - min), 0, 1, 0)
+                
+                AddCorner(sliderFill, 4)
             end
-        end)
-        
-        game:GetService("UserInputService").InputEnded:Connect(function(input, gameProcessed)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                draggingSlider = false
+            
+            local sliderButton = CreateInstance("Frame")
+            if sliderButton then
+                sliderButton.Name = "SliderButton"
+                sliderButton.Parent = sliderBg
+                sliderButton.BackgroundColor3 = theme.Primary
+                sliderButton.BorderSizePixel = 0
+                sliderButton.Size = UDim2.new(0, 16, 1, 8)
+                sliderButton.Position = UDim2.new((currentValue - min) / (max - min), -8, 0.5, -4)
+                
+                AddCorner(sliderButton, 8)
+                AddStroke(sliderButton, theme.Text, 1, 0.5)
+                
+                local draggingSlider = false
+                
+                sliderButton.InputBegan:Connect(function(input, gameProcessed)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        draggingSlider = true
+                    end
+                end)
+                
+                game:GetService("UserInputService").InputEnded:Connect(function(input, gameProcessed)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        draggingSlider = false
+                    end
+                end)
+                
+                game:GetService("UserInputService").InputChanged:Connect(function(input, gameProcessed)
+                    if draggingSlider and input.UserInputType == Enum.UserInputType.Mouse and sliderBg then
+                        local mouse = game:GetService("Mouse")
+                        local relativeX = math.clamp(
+                            mouse.X - sliderBg.AbsolutePosition.X,
+                            0,
+                            sliderBg.AbsoluteSize.X
+                        )
+                        
+                        local newValue = math.round(
+                            min + (relativeX / sliderBg.AbsoluteSize.X) * (max - min)
+                        )
+                        
+                        currentValue = math.clamp(newValue, min, max)
+                        local ratio = (currentValue - min) / (max - min)
+                        
+                        if sliderFill then sliderFill.Size = UDim2.new(ratio, 0, 1, 0) end
+                        if sliderButton then sliderButton.Position = UDim2.new(ratio, -8, 0.5, -4) end
+                        if label then label.Text = (sliderOptions.Label or "Value") .. ": " .. tostring(currentValue) end
+                        
+                        if callback then
+                            pcall(function()
+                                callback(currentValue)
+                            end)
+                        end
+                    end
+                end)
             end
-        end)
-        
-        game:GetService("UserInputService").InputChanged:Connect(function(input, gameProcessed)
-            if draggingSlider and input.UserInputType == Enum.UserInputType.Mouse and sliderBg then
-                local mouse = game:GetService("Mouse")
-                local relativeX = math.clamp(
-                    mouse.X - sliderBg.AbsolutePosition.X,
-                    0,
-                    sliderBg.AbsoluteSize.X
-                )
-                
-                local newValue = math.round(
-                    min + (relativeX / sliderBg.AbsoluteSize.X) * (max - min)
-                )
-                
-                currentValue = math.clamp(newValue, min, max)
-                local ratio = (currentValue - min) / (max - min)
-                
-                if sliderFill then sliderFill.Size = UDim2.new(ratio, 0, 1, 0) end
-                if sliderButton then sliderButton.Position = UDim2.new(ratio, -8, 0.5, -4) end
-                if label then label.Text = (sliderOptions.Label or "Value") .. ": " .. currentValue end
-                
-                if callback then
-                    pcall(function()
-                        callback(currentValue)
-                    end)
-                end
-            end
-        end)
+        end
         
         return container
     end
@@ -919,14 +915,16 @@ function KLib.CreateWindow(title, options)
         
         local theme = GetTheme()
         
-        local sep = CreateInstance("Frame", {
-            Name = "Separator",
-            Parent = scrollFrame,
-            BackgroundColor3 = theme.Border,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -24, 0, 1),
-            LayoutOrder = separatorOptions.LayoutOrder or 1,
-        })
+        local sep = CreateInstance("Frame")
+        if sep then
+            sep.Name = "Separator"
+            sep.Parent = scrollFrame
+            sep.BackgroundColor3 = theme.Border
+            sep.BorderSizePixel = 0
+            sep.Size = UDim2.new(1, -24, 0, 1)
+            sep.LayoutOrder = separatorOptions.LayoutOrder or 1
+        end
+        
         return sep
     end
     
@@ -945,34 +943,34 @@ function KLib.CreateWindow(title, options)
             warning = theme.Warning,
         }
         
-        local notif = CreateInstance("Frame", {
-            Name = "Notification",
-            Parent = screenGui,
-            BackgroundColor3 = colors[notifType] or colors.info,
-            BorderSizePixel = 0,
-            Size = UDim2.new(0, 320, 0, 55),
-            Position = UDim2.new(1, 20, 1, -75),
-            ZIndex = 999,
-        })
-        
+        local notif = CreateInstance("Frame")
         if not notif then return end
+        
+        notif.Name = "Notification"
+        notif.Parent = screenGui
+        notif.BackgroundColor3 = colors[notifType] or colors.info
+        notif.BorderSizePixel = 0
+        notif.Size = UDim2.new(0, 320, 0, 55)
+        notif.Position = UDim2.new(1, 20, 1, -75)
+        notif.ZIndex = 999
         
         AddCorner(notif, 8)
         AddStroke(notif, colors[notifType], 1, 0.3)
         
-        local notifText = CreateInstance("TextLabel", {
-            Parent = notif,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, -20, 1, 0),
-            Position = UDim2.new(0, 10, 0, 0),
-            Text = message or "Notification",
-            TextColor3 = theme.Text,
-            TextSize = 13,
-            Font = Enum.Font.Gotham,
-            TextWrapped = true,
-            TextYAlignment = Enum.TextYAlignment.Center,
-        })
+        local notifText = CreateInstance("TextLabel")
+        if notifText then
+            notifText.Parent = notif
+            notifText.BackgroundTransparency = 1
+            notifText.BorderSizePixel = 0
+            notifText.Size = UDim2.new(1, -20, 1, 0)
+            notifText.Position = UDim2.new(0, 10, 0, 0)
+            notifText.Text = message or "Notification"
+            notifText.TextColor3 = theme.Text
+            notifText.TextSize = 13
+            notifText.Font = Enum.Font.Gotham
+            notifText.TextWrapped = true
+            notifText.TextYAlignment = Enum.TextYAlignment.Center
+        end
         
         -- Tween in
         notif.Position = UDim2.new(1, 20, 1, -75)
@@ -991,7 +989,9 @@ function KLib.CreateWindow(title, options)
         
         if tween2 then
             tween2.Completed:Connect(function()
-                if notif then notif:Destroy() end
+                if notif then
+                    notif:Destroy()
+                end
             end)
         else
             task.wait(0.3)
@@ -1044,7 +1044,9 @@ end
 function KLib.SetTheme(themeName)
     if KLib.Themes[themeName] then
         KLib.Config.Theme = themeName
+        return true
     end
+    return false
 end
 
 function KLib.SetWatermark(enabled, text)
@@ -1062,4 +1064,5 @@ function KLib.GetAvailableThemes()
     return themes
 end
 
+print("[KLib] ✓ Załadowana pomyślnie!")
 return KLib
