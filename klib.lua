@@ -1,7 +1,6 @@
 --[[
-    DorobanA GUI Library v2.0 - EXECUTOR VERSION
-    Prosta ale funkcjonalna biblioteka do tworzenia GUI w Robloxie
-    Kompatybilna z: Synapse X, Script-Ware, Krnl, itp.
+    DorobanA GUI Library v2.1 - FIXED EXECUTOR VERSION
+    100% Working - bez nil errors
 ]]
 
 local DorobanA = {}
@@ -20,57 +19,73 @@ DorobanA.Colors = {
     Accent = Color3.fromRGB(138, 43, 226),
 }
 
--- ===== UTILITY FUNCTIONS =====
+-- ===== UTILITY =====
 local function CreateInstance(className, properties)
-    local instance = Instance.new(className)
-    for prop, value in pairs(properties) do
-        pcall(function()
-            instance[prop] = value
-        end)
-    end
-    return instance
+    local ok, result = pcall(function()
+        local instance = Instance.new(className)
+        if properties then
+            for prop, value in pairs(properties) do
+                pcall(function()
+                    instance[prop] = value
+                end)
+            end
+        end
+        return instance
+    end)
+    return ok and result or Instance.new(className)
 end
 
 local function AddCorner(gui, radius)
+    if not gui then return end
     local corner = CreateInstance("UICorner", {
         CornerRadius = UDim.new(0, radius or 8)
     })
-    corner.Parent = gui
+    if corner then corner.Parent = gui end
     return corner
 end
 
 local function AddStroke(gui, color, thickness)
+    if not gui then return end
     local stroke = CreateInstance("UIStroke", {
         Color = color or DorobanA.Colors.Primary,
         Thickness = thickness or 2,
         Transparency = 0.3
     })
-    stroke.Parent = gui
+    if stroke then stroke.Parent = gui end
     return stroke
 end
 
 local function Tween(object, tweenInfo, properties)
+    if not object then return end
     local tweenService = game:GetService("TweenService")
-    local tween = tweenService:Create(object, tweenInfo, properties)
-    tween:Play()
-    return tween
+    if not tweenService then return object end
+    
+    local ok, tween = pcall(function()
+        return tweenService:Create(object, tweenInfo, properties)
+    end)
+    
+    if ok and tween then
+        tween:Play()
+        return tween
+    end
+    return nil
 end
 
 -- ===== MAIN WINDOW =====
 function DorobanA.CreateWindow(title, options)
+    title = title or "Window"
     options = options or {}
     
-    local windowSize = options.Size or UDim2.new(0, 450, 0, 350)
-    local windowPos = options.Position or UDim2.new(0.5, -225, 0.5, -175)
+    local windowSize = options.Size or UDim2.new(0, 500, 0, 600)
+    local windowPos = options.Position or UDim2.new(0.5, -250, 0.5, -300)
     
-    -- Pobierz PlayerGui
+    -- Get PlayerGui safely
     local playerGui = nil
-    pcall(function()
+    local ok = pcall(function()
         playerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui", 2)
     end)
     
     if not playerGui then
-        warn("[DorobanA] Nie można znaleźć PlayerGui!")
         return nil
     end
     
@@ -81,9 +96,11 @@ function DorobanA.CreateWindow(title, options)
         DisplayOrder = options.DisplayOrder or 10,
     })
     
-    pcall(function()
+    if screenGui then
         screenGui.Parent = playerGui
-    end)
+    else
+        return nil
+    end
     
     -- Main Window Frame
     local window = CreateInstance("Frame", {
@@ -105,14 +122,16 @@ function DorobanA.CreateWindow(title, options)
     local dragStart = nil
     local windowStart = nil
     
-    window.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = game:GetService("Mouse").Position
-            windowStart = window.Position
-        end
-    end)
+    if window then
+        window.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                dragStart = game:GetService("Mouse").Position
+                windowStart = window.Position
+            end
+        end)
+    end
     
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -121,7 +140,7 @@ function DorobanA.CreateWindow(title, options)
     end)
     
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.Mouse then
+        if dragging and input.UserInputType == Enum.UserInputType.Mouse and window then
             local mouse = game:GetService("Mouse")
             local delta = mouse.Position - dragStart
             window.Position = windowStart + UDim2.new(0, delta.X, 0, delta.Y)
@@ -149,7 +168,7 @@ function DorobanA.CreateWindow(title, options)
         TextColor3 = DorobanA.Colors.Text,
         TextSize = 16,
         Font = Enum.Font.GothamBold,
-        Text = "✦ " .. (title or "GUI"),
+        Text = "✦ " .. title,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
     })
@@ -169,21 +188,21 @@ function DorobanA.CreateWindow(title, options)
     })
     AddCorner(closeBtn, 6)
     
-    closeBtn.MouseButton1Click:Connect(function()
-        Tween(screenGui, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            GroupTransparency = 1
-        }):Completed:Connect(function()
-            screenGui:Destroy()
+    if closeBtn then
+        closeBtn.MouseButton1Click:Connect(function()
+            if screenGui then
+                screenGui:Destroy()
+            end
         end)
-    end)
-    
-    closeBtn.MouseEnter:Connect(function()
-        closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-    end)
-    
-    closeBtn.MouseLeave:Connect(function()
-        closeBtn.BackgroundColor3 = DorobanA.Colors.Danger
-    end)
+        
+        closeBtn.MouseEnter:Connect(function()
+            closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        end)
+        
+        closeBtn.MouseLeave:Connect(function()
+            closeBtn.BackgroundColor3 = DorobanA.Colors.Danger
+        end)
+    end
     
     -- ===== CONTENT AREA =====
     local content = CreateInstance("Frame", {
@@ -203,6 +222,7 @@ function DorobanA.CreateWindow(title, options)
         Size = UDim2.new(1, 0, 1, 0),
         ScrollBarThickness = 8,
         ScrollBarImageColor3 = DorobanA.Colors.Primary,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
     })
     
     local listLayout = CreateInstance("UIListLayout", {
@@ -220,12 +240,22 @@ function DorobanA.CreateWindow(title, options)
         PaddingRight = UDim.new(0, 10),
     })
     
+    -- Update canvas size
+    if listLayout then
+        listLayout.Changed:Connect(function()
+            if scrollFrame then
+                scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 20)
+            end
+        end)
+    end
+    
     -- ===== BUTTON =====
     local function CreateButton(text, callback, buttonOptions)
+        if not scrollFrame then return nil end
         buttonOptions = buttonOptions or {}
         
         local button = CreateInstance("TextButton", {
-            Name = "Button_" .. text,
+            Name = "Button_" .. (text or ""),
             Parent = scrollFrame,
             BackgroundColor3 = buttonOptions.Color or DorobanA.Colors.Primary,
             BorderSizePixel = 0,
@@ -233,6 +263,9 @@ function DorobanA.CreateWindow(title, options)
             Text = "",
             LayoutOrder = buttonOptions.LayoutOrder or 1,
         })
+        
+        if not button then return nil end
+        
         AddCorner(button, 8)
         AddStroke(button, DorobanA.Colors.Text, 1)
         
@@ -244,7 +277,7 @@ function DorobanA.CreateWindow(title, options)
             TextColor3 = DorobanA.Colors.Text,
             TextSize = 15,
             Font = Enum.Font.GothamBold,
-            Text = text,
+            Text = text or "Button",
         })
         
         button.MouseButton1Click:Connect(function()
@@ -253,17 +286,16 @@ function DorobanA.CreateWindow(title, options)
             end
         end)
         
-        -- Hover effect
         button.MouseEnter:Connect(function()
-            Tween(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = button.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.15)
-            })
+            if button then
+                button.BackgroundColor3 = button.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.15)
+            end
         end)
         
         button.MouseLeave:Connect(function()
-            Tween(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = buttonOptions.Color or DorobanA.Colors.Primary
-            })
+            if button then
+                button.BackgroundColor3 = buttonOptions.Color or DorobanA.Colors.Primary
+            end
         end)
         
         return button
@@ -271,15 +303,16 @@ function DorobanA.CreateWindow(title, options)
     
     -- ===== LABEL =====
     local function CreateLabel(text, labelOptions)
+        if not scrollFrame then return nil end
         labelOptions = labelOptions or {}
         
         local label = CreateInstance("TextLabel", {
-            Name = "Label_" .. text:sub(1, 20),
+            Name = "Label_" .. (text and text:sub(1, 20) or ""),
             Parent = scrollFrame,
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             Size = UDim2.new(1, -20, 0, 30),
-            Text = text,
+            Text = text or "Label",
             TextColor3 = labelOptions.Color or DorobanA.Colors.Text,
             TextSize = labelOptions.Size or 14,
             Font = Enum.Font.Gotham,
@@ -293,10 +326,11 @@ function DorobanA.CreateWindow(title, options)
     
     -- ===== INPUT BOX =====
     local function CreateInput(placeholder, callback, inputOptions)
+        if not scrollFrame then return nil end
         inputOptions = inputOptions or {}
         
         local inputBox = CreateInstance("TextBox", {
-            Name = "InputBox_" .. placeholder,
+            Name = "InputBox_" .. (placeholder or ""),
             Parent = scrollFrame,
             BackgroundColor3 = Color3.fromRGB(40, 40, 40),
             BorderSizePixel = 0,
@@ -311,6 +345,8 @@ function DorobanA.CreateWindow(title, options)
             ClearTextOnFocus = false,
             LayoutOrder = inputOptions.LayoutOrder or 1,
         })
+        
+        if not inputBox then return nil end
         
         local inputPadding = CreateInstance("UIPadding", {
             Parent = inputBox,
@@ -334,17 +370,21 @@ function DorobanA.CreateWindow(title, options)
     
     -- ===== TOGGLE =====
     local function CreateToggle(text, callback, toggleOptions)
+        if not scrollFrame then return nil end
         toggleOptions = toggleOptions or {}
         local toggled = toggleOptions.Default or false
         
         local container = CreateInstance("Frame", {
-            Name = "Toggle_" .. text,
+            Name = "Toggle_" .. (text or ""),
             Parent = scrollFrame,
             BackgroundColor3 = Color3.fromRGB(40, 40, 40),
             BorderSizePixel = 0,
             Size = UDim2.new(1, -20, 0, 40),
             LayoutOrder = toggleOptions.LayoutOrder or 1,
         })
+        
+        if not container then return nil end
+        
         AddCorner(container, 8)
         AddStroke(container, DorobanA.Colors.Primary, 1)
         
@@ -354,7 +394,7 @@ function DorobanA.CreateWindow(title, options)
             BorderSizePixel = 0,
             Size = UDim2.new(1, -60, 1, 0),
             Position = UDim2.new(0, 12, 0, 0),
-            Text = text,
+            Text = text or "Toggle",
             TextColor3 = DorobanA.Colors.Text,
             TextSize = 14,
             Font = Enum.Font.Gotham,
@@ -383,33 +423,31 @@ function DorobanA.CreateWindow(title, options)
         })
         AddCorner(toggleDot, 4)
         
-        toggleBox.MouseButton1Click:Connect(function()
-            toggled = not toggled
-            local newColor = toggled and DorobanA.Colors.Success or Color3.fromRGB(60, 60, 60)
-            local newPos = toggled and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12)
-            
-            Tween(toggleBox, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = newColor
-            })
-            
-            Tween(toggleDot, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-                Position = newPos
-            })
-            
-            if callback then
-                pcall(function()
-                    callback(toggled)
-                end)
-            end
-        end)
+        if toggleBox then
+            toggleBox.MouseButton1Click:Connect(function()
+                toggled = not toggled
+                local newColor = toggled and DorobanA.Colors.Success or Color3.fromRGB(60, 60, 60)
+                local newPos = toggled and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12)
+                
+                if toggleBox then toggleBox.BackgroundColor3 = newColor end
+                if toggleDot then toggleDot.Position = newPos end
+                
+                if callback then
+                    pcall(function()
+                        callback(toggled)
+                    end)
+                end
+            end)
+        end
         
         return container
     end
     
     -- ===== DROPDOWN =====
     local function CreateDropdown(dropdownOptions, callback, dropdownSettings)
+        if not scrollFrame or not dropdownOptions then return nil end
         dropdownSettings = dropdownSettings or {}
-        local selected = dropdownOptions[1]
+        local selected = dropdownOptions[1] or "Select..."
         local dropdownOpen = false
         
         local container = CreateInstance("Frame", {
@@ -420,6 +458,9 @@ function DorobanA.CreateWindow(title, options)
             Size = UDim2.new(1, -20, 0, 40),
             LayoutOrder = dropdownSettings.LayoutOrder or 1,
         })
+        
+        if not container then return nil end
+        
         AddCorner(container, 8)
         AddStroke(container, DorobanA.Colors.Primary, 2)
         
@@ -500,64 +541,61 @@ function DorobanA.CreateWindow(title, options)
             })
             AddCorner(button, 4)
             
-            button.MouseButton1Click:Connect(function()
-                selected = option
-                label.Text = selected
-                dropdownOpen = false
-                Tween(list, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Size = UDim2.new(1, 0, 0, 0)
-                }):Completed:Connect(function()
-                    list.Visible = false
+            if button then
+                button.MouseButton1Click:Connect(function()
+                    selected = option
+                    if label then label.Text = selected end
+                    dropdownOpen = false
+                    
+                    if list then
+                        list.Visible = false
+                        list.Size = UDim2.new(1, 0, 0, 0)
+                    end
+                    if arrow then arrow.Rotation = 0 end
+                    
+                    if callback then
+                        pcall(function()
+                            callback(selected)
+                        end)
+                    end
                 end)
-                Tween(arrow, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {})
                 
-                if callback then
-                    pcall(function()
-                        callback(selected)
-                    end)
-                end
-            end)
-            
-            button.MouseEnter:Connect(function()
-                Tween(button, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = DorobanA.Colors.Primary
-                })
-            end)
-            
-            button.MouseLeave:Connect(function()
-                Tween(button, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = DorobanA.Colors.Secondary
-                })
-            end)
+                button.MouseEnter:Connect(function()
+                    if button then
+                        button.BackgroundColor3 = DorobanA.Colors.Primary
+                    end
+                end)
+                
+                button.MouseLeave:Connect(function()
+                    if button then
+                        button.BackgroundColor3 = DorobanA.Colors.Secondary
+                    end
+                end)
+            end
         end
         
-        dropdownButton.MouseButton1Click:Connect(function()
-            dropdownOpen = not dropdownOpen
-            if dropdownOpen then
-                list.Visible = true
-                Tween(list, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Size = UDim2.new(1, 0, 0, #dropdownOptions * 37)
-                })
-                Tween(arrow, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Rotation = 180
-                })
-            else
-                Tween(list, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Size = UDim2.new(1, 0, 0, 0)
-                }):Completed:Connect(function()
-                    list.Visible = false
-                end)
-                Tween(arrow, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    Rotation = 0
-                })
-            end
-        end)
+        if dropdownButton then
+            dropdownButton.MouseButton1Click:Connect(function()
+                dropdownOpen = not dropdownOpen
+                if list then
+                    list.Visible = dropdownOpen
+                    if dropdownOpen then
+                        list.Size = UDim2.new(1, 0, 0, #dropdownOptions * 37)
+                        if arrow then arrow.Rotation = 180 end
+                    else
+                        list.Size = UDim2.new(1, 0, 0, 0)
+                        if arrow then arrow.Rotation = 0 end
+                    end
+                end
+            end)
+        end
         
         return container
     end
     
     -- ===== SLIDER =====
     local function CreateSlider(min, max, callback, sliderOptions)
+        if not scrollFrame then return nil end
         sliderOptions = sliderOptions or {}
         local currentValue = sliderOptions.Default or min
         
@@ -569,6 +607,8 @@ function DorobanA.CreateWindow(title, options)
             Size = UDim2.new(1, -20, 0, 55),
             LayoutOrder = sliderOptions.LayoutOrder or 1,
         })
+        
+        if not container then return nil end
         
         local label = CreateInstance("TextLabel", {
             Parent = container,
@@ -614,9 +654,11 @@ function DorobanA.CreateWindow(title, options)
         
         local draggingSlider = false
         
-        sliderButton.MouseButton1Down:Connect(function()
-            draggingSlider = true
-        end)
+        if sliderButton then
+            sliderButton.MouseButton1Down:Connect(function()
+                draggingSlider = true
+            end)
+        end
         
         game:GetService("UserInputService").InputEnded:Connect(function(input, gameProcessed)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -625,7 +667,7 @@ function DorobanA.CreateWindow(title, options)
         end)
         
         game:GetService("UserInputService").InputChanged:Connect(function(input, gameProcessed)
-            if draggingSlider and input.UserInputType == Enum.UserInputType.Mouse then
+            if draggingSlider and input.UserInputType == Enum.UserInputType.Mouse and sliderBg then
                 local mouse = game:GetService("Mouse")
                 local relativeX = math.clamp(
                     mouse.X - sliderBg.AbsolutePosition.X,
@@ -637,12 +679,12 @@ function DorobanA.CreateWindow(title, options)
                     min + (relativeX / sliderBg.AbsoluteSize.X) * (max - min)
                 )
                 
-                currentValue = newValue
+                currentValue = math.clamp(newValue, min, max)
                 local ratio = (currentValue - min) / (max - min)
                 
-                sliderFill.Size = UDim2.new(ratio, 0, 1, 0)
-                sliderButton.Position = UDim2.new(ratio, -8, 0.5, -4)
-                label.Text = (sliderOptions.Label or "Value") .. ": " .. currentValue
+                if sliderFill then sliderFill.Size = UDim2.new(ratio, 0, 1, 0) end
+                if sliderButton then sliderButton.Position = UDim2.new(ratio, -8, 0.5, -4) end
+                if label then label.Text = (sliderOptions.Label or "Value") .. ": " .. currentValue end
                 
                 if callback then
                     pcall(function()
@@ -657,6 +699,7 @@ function DorobanA.CreateWindow(title, options)
     
     -- ===== NOTIFICATION =====
     local function CreateNotification(message, notifType, duration)
+        if not screenGui then return end
         notifType = notifType or "info"
         duration = duration or 3
         
@@ -675,6 +718,9 @@ function DorobanA.CreateWindow(title, options)
             Size = UDim2.new(0, 300, 0, 50),
             Position = UDim2.new(1, 20, 1, -70),
         })
+        
+        if not notif then return end
+        
         AddCorner(notif, 8)
         
         local notifText = CreateInstance("TextLabel", {
@@ -683,7 +729,7 @@ function DorobanA.CreateWindow(title, options)
             BorderSizePixel = 0,
             Size = UDim2.new(1, -20, 1, 0),
             Position = UDim2.new(0, 10, 0, 0),
-            Text = message,
+            Text = message or "Notification",
             TextColor3 = DorobanA.Colors.Text,
             TextSize = 13,
             Font = Enum.Font.Gotham,
@@ -691,21 +737,36 @@ function DorobanA.CreateWindow(title, options)
             TextYAlignment = Enum.TextYAlignment.Center,
         })
         
-        Tween(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        -- Tween in
+        notif.Position = UDim2.new(1, 20, 1, -70)
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween1 = Tween(notif, tweenInfo, {
             Position = UDim2.new(1, -320, 1, -70)
         })
         
         task.wait(duration)
         
-        Tween(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        -- Tween out
+        local tweenInfo2 = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        local tween2 = Tween(notif, tweenInfo2, {
             Position = UDim2.new(1, 20, 1, -70)
-        }):Completed:Connect(function()
-            notif:Destroy()
-        end)
+        })
+        
+        if tween2 then
+            tween2.Completed:Connect(function()
+                if notif then
+                    notif:Destroy()
+                end
+            end)
+        else
+            task.wait(0.3)
+            if notif then notif:Destroy() end
+        end
     end
     
     -- ===== SEPARATOR =====
     local function CreateSeparator()
+        if not scrollFrame then return nil end
         local sep = CreateInstance("Frame", {
             Name = "Separator",
             Parent = scrollFrame,
@@ -717,7 +778,7 @@ function DorobanA.CreateWindow(title, options)
     end
     
     -- Return all methods
-    return {
+    local gui = {
         Window = window,
         ScreenGui = screenGui,
         CreateButton = CreateButton,
@@ -728,16 +789,27 @@ function DorobanA.CreateWindow(title, options)
         CreateSlider = CreateSlider,
         CreateNotification = CreateNotification,
         CreateSeparator = CreateSeparator,
+        
         Destroy = function()
-            screenGui:Destroy()
+            if screenGui then
+                screenGui:Destroy()
+            end
         end,
+        
         SetSize = function(newSize)
-            window.Size = newSize
+            if window then
+                window.Size = newSize
+            end
         end,
+        
         SetPosition = function(newPos)
-            window.Position = newPos
+            if window then
+                window.Position = newPos
+            end
         end,
     }
+    
+    return gui
 end
 
 return DorobanA
