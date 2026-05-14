@@ -1,49 +1,30 @@
---[[
-    ═══════════════════════════════════════════════════════════
-    █▀▀ █░█ █▀█ █▀█ █▀▄▀█ █▀▀   █░░ █ █▄▄ █▀█ ▄▀█ █▀█ █▄█
-    █▄▄ █▀█ █▀▄ █▄█ █░▀░█ ██▄   █▄▄ █ █▄█ █▀▄ █▀█ █▀▄ ░█░
-    ═══════════════════════════════════════════════════════════
-    Zaawansowana biblioteka GUI - Wersja 2.0 Premium
-    Niewykrywalny system z pełnym zestawem funkcji
-    ═══════════════════════════════════════════════════════════
-]]
-
 local Library = {}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
--- Kolory motywu
+-- Theme
 local Theme = {
-    -- Główne kolory
     Background = Color3.fromRGB(15, 15, 15),
     SecondaryBackground = Color3.fromRGB(20, 20, 20),
     TertiaryBackground = Color3.fromRGB(25, 25, 25),
-    
-    -- Akcent
-    Accent = Color3.fromRGB(138, 43, 226), -- Fioletowy
+    Accent = Color3.fromRGB(138, 43, 226),
     AccentDark = Color3.fromRGB(108, 33, 186),
     AccentLight = Color3.fromRGB(168, 73, 255),
-    
-    -- Tekst
     TextPrimary = Color3.fromRGB(255, 255, 255),
     TextSecondary = Color3.fromRGB(180, 180, 180),
     TextDisabled = Color3.fromRGB(120, 120, 120),
-    
-    -- Statusy
     Success = Color3.fromRGB(76, 175, 80),
     Warning = Color3.fromRGB(255, 152, 0),
     Error = Color3.fromRGB(244, 67, 54),
     Info = Color3.fromRGB(33, 150, 243),
-    
-    -- Elementy UI
     Border = Color3.fromRGB(40, 40, 40),
     Hover = Color3.fromRGB(35, 35, 35),
     Active = Color3.fromRGB(45, 45, 45),
 }
 
--- Ikony (Lucide icons)
+-- Icons
 local Icons = {
     Home = "rbxassetid://10734950309",
     Settings = "rbxassetid://10734950886",
@@ -61,7 +42,7 @@ local Icons = {
     Copy = "rbxassetid://10709818534",
 }
 
--- Funkcje zabezpieczające
+-- Get container
 local function getContainer()
     local containers = {
         gethui and gethui(),
@@ -83,6 +64,7 @@ local function getContainer()
     return game:GetService("Players").LocalPlayer.PlayerGui
 end
 
+-- Random string
 local function randomString(length)
     local chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     local result = ""
@@ -93,6 +75,7 @@ local function randomString(length)
     return result
 end
 
+-- Create element
 local function createElement(class, properties)
     local element = Instance.new(class)
     for prop, value in pairs(properties) do
@@ -106,6 +89,7 @@ local function createElement(class, properties)
     return element
 end
 
+-- Create gradient
 local function createGradient(parent, rotation)
     local gradient = createElement("UIGradient", {
         Color = ColorSequence.new({
@@ -118,7 +102,7 @@ local function createGradient(parent, rotation)
     return gradient
 end
 
--- Animacje
+-- Tween
 local function smoothTween(object, properties, duration)
     local tween = TweenService:Create(
         object,
@@ -129,7 +113,7 @@ local function smoothTween(object, properties, duration)
     return tween
 end
 
--- Notyfikacje
+-- Notifications
 local NotificationManager = {}
 NotificationManager.Notifications = {}
 
@@ -363,7 +347,7 @@ local function createWatermark()
         Parent = Watermark
     })
     
-    -- Aktualizacja FPS i Ping
+    -- FPS counter
     local frameCounter = 0
     local lastUpdate = tick()
     
@@ -392,7 +376,7 @@ local function createWatermark()
         end
     end)
     
-    -- Animacja gradient
+    -- Gradient animation
     spawn(function()
         while wait() do
             smoothTween(gradient, {Rotation = gradient.Rotation + 360}, 8)
@@ -403,13 +387,13 @@ local function createWatermark()
     return WatermarkGui
 end
 
--- Główna funkcja tworzenia okna
+-- Main window
 function Library:CreateWindow(config)
     config = config or {}
     local windowName = config.Name or "Chrome UI"
     local windowSize = config.Size or UDim2.new(0, 650, 0, 450)
     
-    -- Tworzenie watermark
+    -- Watermark
     createWatermark()
     
     local ScreenGui = createElement("ScreenGui", {
@@ -423,7 +407,7 @@ function Library:CreateWindow(config)
         syn.protect_gui(ScreenGui)
     end
     
-    -- Główne okno
+    -- Main frame
     local MainFrame = createElement("Frame", {
         Name = randomString(12),
         Size = windowSize,
@@ -440,7 +424,7 @@ function Library:CreateWindow(config)
         Parent = MainFrame
     })
     
-    -- Cień zewnętrzny
+    -- Shadow
     local Shadow = createElement("ImageLabel", {
         Name = randomString(8),
         BackgroundTransparency = 1,
@@ -455,7 +439,7 @@ function Library:CreateWindow(config)
         Parent = MainFrame
     })
     
-    -- Nagłówek z gradientem
+    -- Header
     local Header = createElement("Frame", {
         Name = randomString(10),
         Size = UDim2.new(1, 0, 0, 50),
@@ -487,7 +471,7 @@ function Library:CreateWindow(config)
     
     createGradient(HeaderGradient, 90)
     
-    -- Logo i tytuł
+    -- Logo
     local LogoContainer = createElement("Frame", {
         Size = UDim2.new(0, 150, 1, 0),
         Position = UDim2.new(0, 20, 0, 0),
@@ -521,7 +505,7 @@ function Library:CreateWindow(config)
         Parent = LogoContainer
     })
     
-    -- Przyciski kontrolne
+    -- Control buttons
     local ControlButtons = createElement("Frame", {
         Size = UDim2.new(0, 100, 0, 30),
         Position = UDim2.new(1, -110, 0, 10),
@@ -577,8 +561,8 @@ function Library:CreateWindow(config)
     createControlButton(Icons.Copy, UDim2.new(0, 35, 0, 0), function()
         NotificationManager:Create({
             Type = "Info",
-            Title = "Link skopiowany",
-            Message = "Link do GUI został skopiowany do schowka!",
+            Title = "Copied",
+            Message = "Link copied to clipboard!",
             Duration = 2
         })
     end)
@@ -627,7 +611,7 @@ function Library:CreateWindow(config)
         end
     end)
     
-    -- Kontener na zakładki (sidebar)
+    -- Sidebar
     local Sidebar = createElement("Frame", {
         Name = randomString(10),
         Size = UDim2.new(0, 160, 1, -60),
@@ -655,7 +639,7 @@ function Library:CreateWindow(config)
         Parent = Sidebar
     })
     
-    -- Kontener na zawartość
+    -- Content container
     local ContentContainer = createElement("Frame", {
         Name = randomString(10),
         Size = UDim2.new(1, -190, 1, -60),
@@ -671,7 +655,7 @@ function Library:CreateWindow(config)
         Notifications = NotificationManager
     }
     
-    -- Funkcja tworzenia zakładki
+    -- Create tab
     function Window:CreateTab(config)
         local tabName = config.Name or "Tab"
         local tabIcon = config.Icon or Icons.Home
@@ -788,7 +772,7 @@ function Library:CreateWindow(config)
             Window.CurrentTab = Tab
         end)
         
-        -- === SEKCJA ===
+        -- Section
         function Tab:AddSection(sectionName)
             local Section = createElement("Frame", {
                 Name = randomString(8),
@@ -821,7 +805,7 @@ function Library:CreateWindow(config)
             return Section
         end
         
-        -- === PARAGRAPH ===
+        -- Paragraph
         function Tab:AddParagraph(config)
             local title = config.Title or "Paragraph"
             local content = config.Content or ""
@@ -883,7 +867,7 @@ function Library:CreateWindow(config)
             ParagraphContent.Size = UDim2.new(1, -30, 0, contentHeight)
         end
         
-        -- === BUTTON ===
+        -- Button
         function Tab:AddButton(config)
             local buttonText = config.Text or "Button"
             local callback = config.Callback or function() end
@@ -963,7 +947,7 @@ function Library:CreateWindow(config)
             return Button
         end
         
-        -- === TOGGLE ===
+        -- Toggle
         function Tab:AddToggle(config)
             local toggleText = config.Text or "Toggle"
             local default = config.Default or false
@@ -1053,7 +1037,7 @@ function Library:CreateWindow(config)
             }
         end
         
-        -- === SLIDER ===
+        -- Slider
         function Tab:AddSlider(config)
             local sliderText = config.Text or "Slider"
             local min = config.Min or 0
@@ -1197,7 +1181,7 @@ function Library:CreateWindow(config)
             }
         end
         
-        -- === DROPDOWN ===
+        -- Dropdown
         function Tab:AddDropdown(config)
             local dropdownText = config.Text or "Dropdown"
             local options = config.Options or {"Option 1", "Option 2"}
@@ -1348,7 +1332,7 @@ function Library:CreateWindow(config)
             }
         end
         
-        -- === TEXTBOX ===
+        -- Textbox
         function Tab:AddTextbox(config)
             local textboxText = config.Text or "Textbox"
             local placeholder = config.Placeholder or "Enter text..."
@@ -1430,7 +1414,7 @@ function Library:CreateWindow(config)
             }
         end
         
-        -- === KEYBIND ===
+        -- Keybind
         function Tab:AddKeybind(config)
             local keybindText = config.Text or "Keybind"
             local default = config.Default or Enum.KeyCode.E
@@ -1515,7 +1499,7 @@ function Library:CreateWindow(config)
             }
         end
         
-        -- === COLOR PICKER ===
+        -- Color picker
         function Tab:AddColorPicker(config)
             local pickerText = config.Text or "Color Picker"
             local default = config.Default or Color3.fromRGB(255, 255, 255)
@@ -1567,11 +1551,10 @@ function Library:CreateWindow(config)
             })
             
             ColorDisplay.MouseButton1Click:Connect(function()
-                -- Tutaj można dodać picker kolorów
                 NotificationManager:Create({
                     Type = "Info",
                     Title = "Color Picker",
-                    Message = "Funkcja w rozwoju!",
+                    Message = "Feature coming soon!",
                     Duration = 2
                 })
             end)
